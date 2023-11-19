@@ -17,7 +17,7 @@ from brevitas.quant.scaled_int import Int8ActPerTensorFloat
 from brevitas.quant.scaled_int import Int8WeightPerChannelFloat
 
 def make_quant_conv2d(
-        in_channels, out_channels, kernel_size, weight_bit_width, stride=1, padding=0, bias=False, input_quant=None, bias_quant=Int32Bias):
+        in_channels, out_channels, kernel_size, weight_bit_width, stride=1, padding=0, bias=False, input_quant=None, bias_quant=Int32Bias, weight_quant=Int8WeightPerChannelFloat):
     return qnn.QuantConv2d(
         in_channels=in_channels,
         out_channels=out_channels,
@@ -28,7 +28,7 @@ def make_quant_conv2d(
         weight_bit_width=weight_bit_width,
         weight_scaling_per_output_channel=True,
         input_quant=input_quant,
-        weight_quant=Int8WeightPerChannelFloat,
+        weight_quant=weight_quant,
         bias_quant=bias_quant)
 
 class QuantBottleneckBlock(nn.Module):
@@ -56,7 +56,10 @@ class QuantBottleneckBlock(nn.Module):
                     stride=stride,
                     padding=0,
                     bias=bias,
-                    weight_bit_width=weight_bit_width),
+                    weight_bit_width=weight_bit_width,
+                    input_quant=None,
+                    weight_quant=None,
+                    bias_quant=None),
                 nn.BatchNorm2d(self.expansion * planes),
                 )
             shared_quant_act = self.downsample[-1]
@@ -74,11 +77,13 @@ class QuantBottleneckBlock(nn.Module):
         #out = self.dropout(out)
         if len(self.downsample):
             x = self.downsample(x)
+        """
         out = self.adder(out)
         x = self.adder(x)
         # Check that the addition is made explicitly among QuantTensor structures
         assert isinstance(out, QuantTensor), "Perform add among QuantTensors"
         assert isinstance(x, QuantTensor), "Perform add among QuantTensors"
+        """
         out = out + x
         out = self.relu_out(out)
         return out
@@ -98,7 +103,7 @@ class QuantResNet(nn.Module):
         super(QuantResNet, self).__init__()
         self.in_planes = 64
         self.conv1 = make_quant_conv2d(
-            3, 64, kernel_size=3, stride=1, padding=1, weight_bit_width=8, bias=True, input_quant=None, bias_quant=None)
+            3, 64, kernel_size=3, stride=1, padding=1, weight_bit_width=8, bias=True, input_quant=None, bias_quant=None, weight_quant=None)
         self.bn1 = nn.BatchNorm2d(64)
         shared_quant_act = qnn.QuantReLU(bit_width=act_bit_width, return_quant_tensor=True)
         self.relu = shared_quant_act
@@ -121,7 +126,7 @@ class QuantResNet(nn.Module):
         self.final_pool = qnn.TruncAvgPool2d(kernel_size=4, bit_width=act_bit_width, trunc_quant=TruncTo8bit, float_to_int_impl_type="ROUND")
         # Keep last layer at 8b
         self.linear = qnn.QuantLinear(
-            512 * block_impl.expansion, num_classes, weight_bit_width=act_bit_width, bias=True, bias_quant=Int32Bias)
+            512 * block_impl.expansion, num_classes, weight_bit_width=act_bit_width, bias=True, bias_quant=None, input_quant=None, weight_quant=None)
         #self.dropout = nn.Dropout(0.5)
 
         for m in self.modules():
