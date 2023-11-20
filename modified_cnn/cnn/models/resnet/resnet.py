@@ -36,6 +36,7 @@ class QuantBottleneckBlock(nn.Module):
 
     def __init__(self,in_planes,planes,stride=1,shared_quant_act=None,weight_bit_width=8,act_bit_width=8,bias=False):
         super(QuantBottleneckBlock, self).__init__()
+        self.relu0 = qnn.QuantReLU(bit_width=act_bit_width, return_quant_tensor=True)
         self.conv1 = make_quant_conv2d(in_planes,planes,kernel_size=1,stride=1,padding=0,bias=bias,weight_bit_width=weight_bit_width)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu1 = qnn.QuantReLU(bit_width=act_bit_width, return_quant_tensor=True)
@@ -67,9 +68,12 @@ class QuantBottleneckBlock(nn.Module):
             shared_quant_act = qnn.QuantReLU(bit_width=act_bit_width, return_quant_tensor=True)
         self.relu3 = shared_quant_act
         self.relu_out = qnn.QuantReLU(return_quant_tensor=True, bit_width=act_bit_width)
-        self.adder = QuantIdentity(bit_width=act_bit_width, return_quant_tensor=True)
+        #self.adder = QuantIdentity(bit_width=act_bit_width, return_quant_tensor=True)
+        self.adder = QuantIdentity(return_quant_tensor=False)
+        self.identity = nn.Identity()
 
     def forward(self, x):
+        #out = self.relu0(x)
         out = self.relu1(self.bn1(self.conv1(x)))
         #out = self.dropout(out)
         out = self.relu2(self.bn2(self.conv2(out)))
@@ -84,6 +88,8 @@ class QuantBottleneckBlock(nn.Module):
         assert isinstance(out, QuantTensor), "Perform add among QuantTensors"
         assert isinstance(x, QuantTensor), "Perform add among QuantTensors"
         """
+        if isinstance(x, QuantTensor):
+            x = self.identity(x.value)
         out = out + x
         out = self.relu_out(out)
         return out
