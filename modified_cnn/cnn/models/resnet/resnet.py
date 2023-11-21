@@ -88,8 +88,6 @@ class QuantBottleneckBlock(nn.Module):
         assert isinstance(out, QuantTensor), "Perform add among QuantTensors"
         assert isinstance(x, QuantTensor), "Perform add among QuantTensors"
         """
-        if isinstance(x, QuantTensor):
-            x = self.identity(x.value)
         out = out + x
         out = self.relu_out(out)
         return out
