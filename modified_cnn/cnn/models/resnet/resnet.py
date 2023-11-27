@@ -46,7 +46,7 @@ class QuantBottleneckBlock(nn.Module):
         self.conv3 = make_quant_conv2d(planes,self.expansion * planes,kernel_size=1,stride=1,padding=0,bias=bias,weight_bit_width=weight_bit_width)
         self.bn3 = nn.BatchNorm2d(planes * self.expansion)
         self.downsample = nn.Sequential()
-        #self.relu3 = qnn.QuantReLU(bit_width=act_bit_width, return_quant_tensor=True)
+        self.relu3 = qnn.QuantReLU(bit_width=act_bit_width, return_quant_tensor=True)
         #self.dropout = nn.Dropout(0.3)
         if stride != 1 or in_planes != self.expansion * planes:
             self.downsample = nn.Sequential(
