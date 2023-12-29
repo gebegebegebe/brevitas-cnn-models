@@ -137,7 +137,7 @@ class MobileNet(nn.Module):
             bit_width,
             round_average_pool=True,
             in_channels=3,
-            num_classes=1000):
+            num_classes=10):
         super(MobileNet, self).__init__()
         init_block_channels = channels[0][0]
 
