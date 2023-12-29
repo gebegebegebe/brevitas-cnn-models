@@ -44,7 +44,7 @@ class GoogLeNet(nn.Module):
 
     def __init__(
             self,
-            num_classes: int = 1000,
+            num_classes: int = 10,
             aux_logits: bool = True,
             transform_input: bool = False,
             dropout: float = 0.2,
