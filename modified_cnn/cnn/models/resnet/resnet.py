@@ -183,7 +183,7 @@ class QuantResNet(nn.Module):
 def get_resnet50():
     return QuantResNet(
         QuantBottleneckBlock, [3, 4, 6, 3],
-        num_classes=1000,
+        num_classes=10,
         weight_bit_width=4,
         act_bit_width=4,
         first_maxpool=True)
