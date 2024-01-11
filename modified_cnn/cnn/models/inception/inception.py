@@ -85,7 +85,7 @@ class GoogLeNet(nn.Module):
         self.avgpool = qnn.TruncAdaptiveAvgPool2d(output_size=(1, 1), bit_width=bit_precision, trunc_quant=TruncTo8bit, float_to_int_impl_type="ROUND")
         self.dropout = nn.Dropout(dropout, True)
         self.fc = nn.Linear(1024, num_classes)
-        #self.fc = qnn.QuantLinear(1024, num_classes, bit_width=bit_precision, weight_bit_width=bit_precision, return_quant_tensor=False, bias=True, bias_quant=False, input_quant=False, weight_quant=False)
+        #self.fc = qnn.QuantLinear(1024, num_classes, bit_width=bit_precision, weight_bit_width=bit_precision, return_quant_tensor=False, bias=True, bias_quant=Int32Bias)
 
         # Initialize neural network weights
         self._initialize_weights()
@@ -100,6 +100,7 @@ class GoogLeNet(nn.Module):
             x_ch0 = torch.unsqueeze(x[:, 0], 1) * (0.229 / 0.5) + (0.485 - 0.5) / 0.5
             x_ch1 = torch.unsqueeze(x[:, 1], 1) * (0.224 / 0.5) + (0.456 - 0.5) / 0.5
             x_ch2 = torch.unsqueeze(x[:, 2], 1) * (0.225 / 0.5) + (0.406 - 0.5) / 0.5
+            print("FOO")
             x = torch.cat((x_ch0, x_ch1, x_ch2), 1)
         return x
 
@@ -152,7 +153,7 @@ class GoogLeNet(nn.Module):
 
 
 def make_quant_conv2d(
-        in_channels, out_channels, kernel_size, weight_bit_width, stride=1, padding=0, bias=False, input_quant=None, bias_quant=Int32Bias, weight_quant=Int8WeightPerChannelFloat):
+        in_channels, out_channels, kernel_size, weight_bit_width, stride=1, padding=0, bias=False, input_quant=None, bias_quant=Int32Bias):
     return qnn.QuantConv2d(
         in_channels=in_channels,
         out_channels=out_channels,
@@ -163,8 +164,7 @@ def make_quant_conv2d(
         weight_bit_width=weight_bit_width,
         weight_scaling_per_output_channel=True,
         input_quant=input_quant,
-        #weight_quant=Int8WeightPerChannelFloat,
-        weight_quant=weight_quant,
+        weight_quant=Int8WeightPerChannelFloat,
         bias_quant=bias_quant)
 
 
@@ -177,7 +177,7 @@ class BasicConv2d(nn.Module):
         self.requantize = requantize
         #self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
         if first_layer:
-            self.conv = make_quant_conv2d(in_channels, out_channels, kernel_size, 8, stride, padding, bias, None, None, None)
+            self.conv = make_quant_conv2d(in_channels, out_channels, kernel_size, 8, stride, padding, bias, None, bias_quant)
         else:
             self.conv = make_quant_conv2d(in_channels, out_channels, kernel_size, bit_precision, stride, padding, bias, None, bias_quant)
         self.bn = nn.BatchNorm2d(out_channels, eps=0.001)
@@ -230,6 +230,8 @@ class Inception(nn.Module):
         branch4 = self.branch4(x)
 
         if not self.training:
+            print(False)
+            print(dir(self.out_quant))
             self.out_quant.eval()
 
         branch1 = self.out_quant(branch1)
@@ -256,20 +258,15 @@ class InceptionAux(nn.Module):
         #self.avgpool = nn.AdaptiveAvgPool2d((4, 4))
         self.avgpool = qnn.TruncAdaptiveAvgPool2d(output_size=(4, 4), bit_width=bit_precision, trunc_quant=TruncTo8bit, float_to_int_impl_type="ROUND")
         self.conv = BasicConv2d(in_channels, 128, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0))
-        """
-        self.relu = nn.ReLU(True)
+        #self.relu = nn.ReLU(True)
+        self.relu = qnn.QuantReLU(bit_width=bit_precision, return_quant_tensor=False)
         self.fc1 = nn.Linear(2048, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
         """
         self.relu = qnn.QuantReLU(bit_width=bit_precision, return_quant_tensor=True)
-        self.fc1 = nn.Linear(2048, 1024)
-        #self.fc1 = qnn.QuantLinear(2048, 1024, bit_width=bit_precision, weight_bit_width=bit_precision, bias=True, quant_bias=Int32Bias)
+        self.fc1 = qnn.QuantLinear(2048, 1024, bit_width=bit_precision, weight_bit_width=bit_precision, bias=True, quant_bias=Int32Bias)
+        self.fc2 = qnn.QuantLinear(1024, num_classes, bit_width=bit_precision, weight_bit_width=bit_precision, bias=True, quant_bias=Int32Bias)
         """
-        self.fc1 = qnn.QuantLinear(
-            2048, 1024, weight_bit_width=bit_precision, bias=True)
-        """
-        #self.fc2 = qnn.QuantLinear(1024, num_classes, bit_width=bit_precision, weight_bit_width=bit_precision, bias=True, quant_bias=Int32Bias)
-        self.fc2 = nn.Linear(1024, num_classes)
         self.dropout = nn.Dropout(dropout, True)
 
     def forward(self, x: Tensor) -> Tensor:
