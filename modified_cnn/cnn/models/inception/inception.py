@@ -230,8 +230,8 @@ class Inception(nn.Module):
         branch4 = self.branch4(x)
 
         if not self.training:
-            print(False)
-            print(dir(self.out_quant))
+            #print(False)
+            #print(dir(self.out_quant))
             self.out_quant.eval()
 
         branch1 = self.out_quant(branch1)
