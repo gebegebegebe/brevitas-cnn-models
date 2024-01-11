@@ -153,7 +153,16 @@ class GoogLeNet(nn.Module):
 
 
 def make_quant_conv2d(
-        in_channels, out_channels, kernel_size, weight_bit_width, stride=1, padding=0, bias=False, input_quant=None, bias_quant=Int32Bias):
+        in_channels, out_channels, kernel_size, weight_bit_width, stride=1, padding=0, bias=False, input_quant=None, bias_quant=Int32Bias, first_layer=False):
+    if first_layer:
+        return nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            bias=bias)
+
     return qnn.QuantConv2d(
         in_channels=in_channels,
         out_channels=out_channels,
@@ -177,11 +186,11 @@ class BasicConv2d(nn.Module):
         self.requantize = requantize
         #self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
         if first_layer:
-            self.conv = make_quant_conv2d(in_channels, out_channels, kernel_size, 8, stride, padding, bias, None, bias_quant)
+            self.conv = make_quant_conv2d(in_channels, out_channels, kernel_size, 8, stride, padding, bias, None, bias_quant, True)
         else:
             self.conv = make_quant_conv2d(in_channels, out_channels, kernel_size, bit_precision, stride, padding, bias, None, bias_quant)
-        self.bn = nn.BatchNorm2d(out_channels, eps=0.001)
         self.relu = qnn.QuantReLU(bit_width=bit_precision, return_quant_tensor=True)
+        self.bn = nn.BatchNorm2d(out_channels, eps=0.001)
 
     def forward(self, x: Tensor) -> Tensor:
         out = self.conv(x)
@@ -230,8 +239,8 @@ class Inception(nn.Module):
         branch4 = self.branch4(x)
 
         if not self.training:
-            #print(False)
-            #print(dir(self.out_quant))
+            print(False)
+            print(dir(self.out_quant))
             self.out_quant.eval()
 
         branch1 = self.out_quant(branch1)
