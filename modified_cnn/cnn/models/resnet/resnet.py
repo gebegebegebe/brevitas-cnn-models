@@ -81,9 +81,9 @@ class QuantBottleneckBlock(nn.Module):
         #out = self.dropout(out)
         if len(self.downsample):
             x = self.downsample(x)
-        """
         out = self.adder(out)
         x = self.adder(x)
+        """
         # Check that the addition is made explicitly among QuantTensor structures
         assert isinstance(out, QuantTensor), "Perform add among QuantTensors"
         assert isinstance(x, QuantTensor), "Perform add among QuantTensors"
