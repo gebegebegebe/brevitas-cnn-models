@@ -186,6 +186,6 @@ def get_resnet50():
     return QuantResNet(
         QuantBottleneckBlock, [3, 4, 6, 3],
         num_classes=10,
-        weight_bit_width=4,
-        act_bit_width=4,
+        weight_bit_width=8,
+        act_bit_width=8,
         first_maxpool=True)
