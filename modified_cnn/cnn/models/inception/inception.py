@@ -33,7 +33,7 @@ __all__ = [
     "googlenet",
 ]
 
-bit_precision = 4
+bit_precision = 8
 
 # According to the writing of the official library of Torchvision
 GoogLeNetOutputs = namedtuple("GoogLeNetOutputs", ["logits", "aux_logits2", "aux_logits1"])
