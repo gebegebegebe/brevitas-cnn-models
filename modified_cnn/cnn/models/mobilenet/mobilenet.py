@@ -212,7 +212,7 @@ def get_mobilenet_v1():
     round_avgpool = cfg.getboolean('QUANT', 'ROUND_AVG_POOL')
     """
     width_scale = float(1.0)
-    bit_width = int(4)
+    bit_width = int(8)
     round_avgpool = False
 
     if width_scale != 1.0:
